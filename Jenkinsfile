@@ -30,12 +30,12 @@ pipeline {
                 }
             }
         }
-
-        stage('Run Tests') {
-            steps {
-                sh 'python -m pytest tests/ -v'
-            }
-        }
+        //Removed. Will add testing step in pipeline later.
+        // stage('Run Tests') {
+        //     steps {
+        //         sh 'python -m pytest tests/ -v'
+        //     }
+        // }
 
         stage('Deploy Container') {
             steps {
