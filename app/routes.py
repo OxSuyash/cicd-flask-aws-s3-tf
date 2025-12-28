@@ -15,6 +15,10 @@ def home():
 def health():
     return "OK"
 
+@main.route("/test")
+def test():
+    return "This route was added to test pipeline trigger."
+
 @main.route("/upload", methods=["POST"])
 def upload():
     data = request.json
