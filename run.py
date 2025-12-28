@@ -13,3 +13,6 @@ if __name__ == "__main__":
         port=int(os.getenv("FLASK_PORT", 5000)),
         debug=True
     )
+
+
+#Testing commit1  -> changed FLASK_HOST
