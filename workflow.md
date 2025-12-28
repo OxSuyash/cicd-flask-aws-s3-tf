@@ -4,7 +4,10 @@
 
 1. Create ec2 instance with s3 and iam Ref  ->   https://github.com/OxSuyash/create-ec2-iam-s3-tf
 
-2. Create flask app locally
+      Read carefully main.tf, what resources are created and why
+      Also read this  ->   https://github.com/OxSuyash/aws-notes/blob/main/public-vs-private.md
+
+3. Create flask app locally
    Folder structure -
    ```
    flask-app/
@@ -17,17 +20,25 @@
     ├─ docker-file/
     │  └─ Dockerfile
     ├─ run.py
+    ├─ requirements.txt
     ├─ .gitignore
     └─ .env
+   
    ```
    
-3. Install dependencies
+4. Install dependencies
    ```
     pip install boto3
     pip install python-dotenv
    ```
 
-4. Create Access key in aws, add it in .env. Delete access key once app is deployed on instance. This is development .env
+5. Create Access key in aws, add it in .env. Delete access key once app is deployed on instance. This is development .env
+
+   Note: We cannot modify env var names later, because we will use them in project. But, in jenkins, global properties -> env vars are accessible to every pipeline.
+
+   So, to isolate one project env vars from other project env vars  ->  we will add project name in env var name for unique identification of project env vars.
+
+   Eg. ->  FLASK-APP-FLASK-HOST , E-COMM-APP-FLASK-PORT 
    ```
     AWS_ACCESS_KEY_ID=
     AWS_SECRET_ACCESS_KEY=
@@ -37,7 +48,7 @@
     FLASK_PORT=
    ```
 
-5. When you want to deploy app on instance, you only need to provide FLASK_HOST, FLASK_PORT, S3_BUCKET_NAME, AWS_REGION.
+7. When you want to deploy app on instance, you only need to provide FLASK_HOST, FLASK_PORT, S3_BUCKET_NAME, AWS_REGION.
 
      We can provide these env vars while running docker container for that app
        ```
@@ -52,7 +63,7 @@
 
       It makes app accessible from public ip or container port
 
-6. Run app ```python run.py```
+8. Run app ```python run.py```
 
      hit endpoints "/" -> ``` Flask app running ```or "/files" -> empty list, since there are no files in s3 bucket
 
@@ -60,14 +71,14 @@
 
      - Use postman to hit "/upload"  ->  "/files"  -> will show list of files you uploaded.
   
-7. Build and run flask app in docker container locally (Ensure requirements.txt and dockerfile is there)
+9. Build and run flask app in docker container locally (Ensure requirements.txt and dockerfile is there)
    docker desktop ->  running
    terminal -> app directory ->
    ```
    docker build -f docker-file/Dockerfile -t flask-app:latest .
    ```
 
-8. Run container using above image
+10. Run container using above image
    ```
    docker run -p 5000:5000 -e FLASK_HOST=0.0.0.0 -e FLASK_PORT=5000 -e S3_BUCKET_NAME=s3-bucket-25-3def5b7f -e AWS_REGION=us-east-1 --name flask-app-container flask-app:v1
    ```
@@ -76,18 +87,18 @@
    - -p 5000:5000 and FLASK_PORT=5000  ->  host port 5000 is mapped with container port 5000 and we are exposing port 5000 of flask app which is running inside container
 
      Request flows :  browser -> host port 5000 -> container port 5000 -> flask app port 5000
-9. Now check browser ->  http://127.0.0.1/5000/health
+11. Now check browser ->  http://127.0.0.1/5000/health
 
-10. App is working fine when we ran it as docker container locally. Now we will push app to github
+12. App is working fine when we ran it as docker container locally. Now we will push app to github
 
-11. Instance host  port   ->   container port    ->   flask port
+13. Instance host  port   ->   container port    ->   flask port
 
     Note: container port and flask app port must match
 
     Note: Flask host decides which network interface it should listen on.
        127.0.0.1   ->   flask listens only inside container (used for local dev)
        0.0.0.0    ->    flask listens on all network interfaces, (Required for Docker, EC2)
-12. Jenkinsfile
+14. Jenkinsfile
     ```
       docker.build(
              "flask-app:${env.BUILD_NUMBER}",
@@ -118,6 +129,24 @@
     ref  ->    https://github.com/OxSuyash/jenkins-notes/blob/main/install-jenkins.md
     ref  ->    https://github.com/OxSuyash/docker-notes/blob/main/install-docker.md
 
+15. configure jenkins pipeline (Don't trigger build before step 16)  ->   https://github.com/OxSuyash/jenkins-notes/blob/main/workflow-jenkins-github.md
+
+16. Configure env vars used in jenkinsfile
+
+    manage jenkins  ->  system   ->   global properties   ->   environment variables
+
+    Note: These are global properties. Each pipeline has access to it.  So, while creating env vars names, create app specific env var names, so they can be used separately for separate pipelins.
+
+   Note: for jenkins file that will run app containers on ec2 instance we only need to give FLASK_HOST, FLASK_PORT, HOST_PORT, AWS_REGION, S3_BUCKET_NAME. Since we have attached IAM role to instance. 
+   No need to give aws access keys and secret.
+
+   FLASK_HOST   ->   which interface your flask app listening from (0.0.0.0  ->  all interface)
+   FLASK_PORT   ->   which app port your app is listening on
+   HOST_PORT    ->   which host port you have exposed on insatance
+   AWS_REGION   ->   which region your instance is in
+   S3_BUCKET_NAME  ->  which bucket your are connecting to 
+
+17. Manual build jenkins pipeline  ->  from now on for every push to repo, pipeline gets triggered , new build will be generated.
 
 
 
